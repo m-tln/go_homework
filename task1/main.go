@@ -12,7 +12,6 @@ type IStorage interface {
 }
 
 type Storage struct {
-	IStorage
 	units map[string]any
 }
 
@@ -35,7 +34,7 @@ type Book struct {
 }
 
 type ILibrary interface {
-	Storage
+	IStorage
 	SearchByName(name string) (Book, bool)
 	AddBook(name string)
 }
@@ -60,7 +59,7 @@ func (l *Library) SearchByName(name string) (Book, bool) {
 }
 
 func main() {
-	var l Library
+	var l ILibrary = &Library{}
 	l.AddBook("Pronin")
 	fmt.Print(l.SearchByName("Pronin"))
 }
