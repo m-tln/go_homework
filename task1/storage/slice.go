@@ -22,6 +22,6 @@ func (s *StorageSlice) Add(elem any) string {
 	return key
 }
 
-func (s *Storage) SetIDfunc(NewID func() string) {
+func (s *StorageSlice) SetIDfunc(NewID func() string) {
 	s.NewID = NewID
 }

@@ -18,3 +18,7 @@ func (s *StorageMap) Add(elem any) string {
 	s.units[key] = elem
 	return key
 }
+
+func (s *StorageMap) SetIDfunc(NewID func() string) {
+	s.NewID = NewID
+}

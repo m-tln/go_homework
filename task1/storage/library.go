@@ -10,13 +10,13 @@ type ILibrary interface {
 	AddBook(name string)
 }
 
-type Library struct {
+type LibraryMap struct {
 	StorageMap
 	GetID map[string]string
 	NewID func() string
 }
 
-func (l *Library) AddBook(name string) {
+func (l *LibraryMap) AddBook(name string) {
 	b := Book{name: name}
 	key := l.Add(b)
 	if len(l.GetID) == 0 {
@@ -25,7 +25,27 @@ func (l *Library) AddBook(name string) {
 	l.GetID[name] = key
 }
 
-func (l *Library) SearchByName(name string) (Book, bool) {
+func (l *LibraryMap) SearchByName(name string) (Book, bool) {
+	book, ok := l.SearchByID(l.GetID[name])
+	return book.(Book), ok
+}
+
+type LibrarySlice struct {
+	StorageSlice
+	GetID map[string]string
+	NewID func() string
+}
+
+func (l *LibrarySlice) AddBook(name string) {
+	b := Book{name: name}
+	key := l.Add(b)
+	if len(l.GetID) == 0 {
+		l.GetID = make(map[string]string)
+	}
+	l.GetID[name] = key
+}
+
+func (l *LibrarySlice) SearchByName(name string) (Book, bool) {
 	book, ok := l.SearchByID(l.GetID[name])
 	return book.(Book), ok
 }
