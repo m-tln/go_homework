@@ -5,54 +5,36 @@ type Book struct {
 }
 
 type ILibrary interface {
-	IStorage
 	SearchByName(name string) (Book, bool)
 	AddBook(name string)
 	SetIDfunc(NewID func() string)
 }
 
-type LibraryMap struct {
-	StorageMap
-	GetID map[string]string
+type Library struct {
+	storage IStorage
+	GetID   map[string]string
 }
 
-func (l *LibraryMap) AddBook(name string) {
+func New(s IStorage) *Library {
+	return &Library{
+		storage: s,
+	}
+}
+
+func (l *Library) AddBook(name string) {
 	b := Book{Name: name}
-	key := l.Add(b)
+	key := l.storage.Add(b)
 	if len(l.GetID) == 0 {
 		l.GetID = make(map[string]string)
 	}
 	l.GetID[name] = key
 }
 
-func (l *LibraryMap) SearchByName(name string) (Book, bool) {
-	book, ok := l.SearchByID(l.GetID[name])
+func (l *Library) SearchByName(name string) (Book, bool) {
+	book, ok := l.storage.SearchByID(l.GetID[name])
 	return book.(Book), ok
 }
 
-func (l *LibraryMap) SetIDfunc(NewID func() string) {
-	l.StorageMap.SetIDfunc(NewID)
-}
-
-type LibrarySlice struct {
-	StorageSlice
-	GetID map[string]string
-}
-
-func (l *LibrarySlice) AddBook(name string) {
-	b := Book{Name: name}
-	key := l.Add(b)
-	if len(l.GetID) == 0 {
-		l.GetID = make(map[string]string)
-	}
-	l.GetID[name] = key
-}
-
-func (l *LibrarySlice) SearchByName(name string) (Book, bool) {
-	book, ok := l.SearchByID(l.GetID[name])
-	return book.(Book), ok
-}
-
-func (l *LibrarySlice) SetIDfunc(NewID func() string) {
-	l.StorageSlice.SetIDfunc(NewID)
+func (l *Library) SetIDfunc(NewID func() string) {
+	l.storage.SetIDfunc(NewID)
 }
