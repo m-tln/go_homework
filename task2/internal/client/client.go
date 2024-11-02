@@ -10,11 +10,11 @@ import (
 	"time"
 )
 
-type InputData struct {
+type Input struct {
 	InputString string `json:"inputString"`
 }
 
-type OutputData struct {
+type Output struct {
 	OutputString string `json:"outputString"`
 }
 
@@ -30,9 +30,14 @@ func MakeRequest(ctx context.Context, client *http.Client, method, url string, b
 	resp, err := client.Do(req)
 	if err != nil {
 		fmt.Println(err)
+		return []byte{}, 0, err
 	}
 	defer resp.Body.Close()
-	bodyBytes, _ := io.ReadAll(resp.Body)
+	bodyBytes, err := io.ReadAll(resp.Body)
+	if err != nil {
+		fmt.Println(err)
+		return []byte{}, 0, err
+	}
 
 	return bodyBytes, resp.StatusCode, nil
 }
@@ -55,7 +60,7 @@ func VersionRequest(ctx context.Context, client *http.Client) {
 
 func DecodeRequest(ctx context.Context, client *http.Client) {
 	decodeURL := "http://localhost:8080/decode"
-	inputData := InputData{InputString: "SGVsbG8gV29ybGQh"}
+	inputData := Input{InputString: "SGVsbG8gV29ybGQh"}
 	jsonData, err := json.Marshal(inputData)
 	if err != nil {
 		fmt.Println("Error marshalling JSON:", err)
@@ -68,7 +73,7 @@ func DecodeRequest(ctx context.Context, client *http.Client) {
 		return
 	}
 
-	var decodeOutput OutputData
+	var decodeOutput Output
 	err = json.Unmarshal(decodeResp, &decodeOutput)
 	if err != nil {
 		fmt.Println(err)

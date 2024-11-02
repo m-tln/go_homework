@@ -1,19 +1,26 @@
 package server
 
 import (
+	"context"
 	"encoding/base64"
 	"encoding/json"
+	"errors"
+	"fmt"
 	"io"
 	"math/rand"
 	"net/http"
+	"os/signal"
+	"syscall"
 	"time"
+
+	"golang.org/x/sync/errgroup"
 )
 
 type requestBody struct {
 	Str string `json:"inputString"`
 }
 
-type OutputData struct {
+type Output struct {
 	OutputString string `json:"outputString"`
 }
 
@@ -27,15 +34,27 @@ func HandleVersion(w http.ResponseWriter, r *http.Request) {
 }
 
 func HandleDecode(w http.ResponseWriter, r *http.Request) {
-	b, _ := io.ReadAll(r.Body)
+	b, err := io.ReadAll(r.Body)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
 
 	var rb requestBody
-	_ = json.Unmarshal(b, &rb)
+	err = json.Unmarshal(b, &rb)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
 
-	decodedBytes, _ := base64.StdEncoding.DecodeString(rb.Str)
+	decodedBytes, err := base64.StdEncoding.DecodeString(rb.Str)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
 
 	decodedString := string(decodedBytes)
-	output := OutputData{OutputString: decodedString}
+	output := Output{OutputString: decodedString}
 	json.NewEncoder(w).Encode(output)
 }
 
@@ -48,6 +67,8 @@ func HandleHardOp(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+const shutdownTimeout = 15 * time.Second
+
 func StartServer() {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/version", HandleVersion)
@@ -59,5 +80,40 @@ func StartServer() {
 		Handler: mux,
 	}
 
-	go httpServer.ListenAndServe()
+	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
+	defer stop()
+
+	group, ctx := errgroup.WithContext(ctx)
+	group.Go(func() error {
+		if err := httpServer.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+			fmt.Printf("err in listen: %s\n", err)
+			return fmt.Errorf("failed to serve http server: %w", err)
+		}
+		fmt.Println("after listener")
+
+		return nil
+	})
+
+	group.Go(func() error {
+		fmt.Println("before ctx done")
+		<-ctx.Done()
+		fmt.Println("after ctx done")
+
+		shutdownCtx, cancel := context.WithTimeout(context.Background(), shutdownTimeout)
+		defer cancel()
+
+		err := httpServer.Shutdown(shutdownCtx)
+		if err != nil {
+			return err
+		}
+		fmt.Println("after server shutdown")
+
+		return nil
+	})
+
+	err := group.Wait()
+	if err != nil {
+		fmt.Printf("after wait: %s\n", err)
+		return
+	}
 }
